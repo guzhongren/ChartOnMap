@@ -1,0 +1,20 @@
+﻿.myInfoWindow {
+  position: absolute;
+  z-index: 100;
+  -moz-box-shadow: 0 0 1em #26393D;
+  font-family: sans-serif;
+  font-size: 12px;
+  background-color: rgba(255, 255, 255, 0);
+}
+
+/*.dj_ie .myInfoWindow {*/
+  /*border: 1px solid rgba(255, 255, 255, 0);*/
+/*}*/
+
+.myInfoWindow .content {
+  position: relative;
+  color:#002F2F;
+  overflow: auto;
+  padding:2px 2px 2px 2px; 
+  background-color: rgba(255, 255, 255, 0); 
+}

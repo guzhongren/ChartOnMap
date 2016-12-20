@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>图表上图</title>
+
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.14/3.14/dijit/themes/tundra/tundra.css">
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.14/3.14/esri/css/esri.css">
+
+    <link href="ChartInfoWindow.css" rel="stylesheet"/>
+    <style>
+        html,body{
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+        #map{
+            position: relative;
+            width:100%;
+            height:100%;
+        }
+        #info {
+            height: 20%;
+            width: 100%;
+        }
+    </style>
+    <script>
+        var dojoConfig = {
+            packages: [{
+                name: "CustomModules",
+                location: location.pathname.replace(/\/[^/]+$/, "") + "/Widget/CustomModules"
+            }]
+        };
+    </script>
+    <script src="http://localhost/arcgis_js_api/library/3.14/3.14/init.js"></script>
+</head>
+<body class="claro">
+<div id="map" ></div>
+<script src="echarts-2.2.7/build/dist/echarts-all.js"></script>
+<script>
+    require([
+        "esri/map",
+        "esri/geometry/Point",
+        "esri/layers/FeatureLayer",
+        "esri/layers/ArcGISDynamicMapServiceLayer",
+        "esri/symbols/SimpleLineSymbol",
+        "esri/symbols/SimpleFillSymbol",
+        "esri/renderers/SimpleRenderer",
+        "esri/Color",
+        'esri/layers/GraphicsLayer',
+        'esri/graphic',
+        "esri/tasks/query",
+        "esri/tasks/QueryTask",
+        //添加自定义类型的引用
+        "CustomModules/ChartInfoWindow",
+        "CustomModules/geometryUtils",
+        "dojo/_base/array",
+        "dojo/dom-construct",
+        "dojo/_base/window",
+        "dojox/charting/Chart",
+        "dojox/charting/themes/Claro",
+        "dojox/charting/plot2d/Pie",
+        "dojox/charting/action2d/Tooltip",
+        "dojox/charting/action2d/MoveSlice",
+        "dojox/charting/plot2d/Markers",
+        "dojox/charting/axis2d/Default",
+
+
+        "dojo/domReady!"
+    ], function (
+            Map, Point,FeatureLayer, ArcGISDynamicMapServiceLayer,
+            SimpleLineSymbol, SimpleFillSymbol,
+            SimpleRenderer, Color,GraphicsLayer,Graphic,Query,QueryTask,
+            ChartInfoWindow,geometryUrils,
+            array, domConstruct, win, Chart, theme, Pie, Tooltip, MoveSlice
+
+    ) {
+        var Data= null;
+        var map = new Map("map", {
+            center: [112, 38],
+            zoom: 8,
+            basemap: "topo"
+        });
+        var featureLayer = new FeatureLayer("https://zhongren.esri.com/arcgis/rest/services/MyMapService/MapServer/0", {
+            mode: FeatureLayer.MODE_SNAPSHOT,
+            outFields: ["*"]
+        });
+
+        var defaultSymbol = new SimpleFillSymbol().setStyle(SimpleFillSymbol.STYLE_NULL);
+        var renderer = new SimpleRenderer(defaultSymbol);
+        featureLayer.setRenderer(renderer);
+
+        featureLayer.on("update-end", function (evt) {
+            displayChart();
+        });
+
+        map.addLayer(featureLayer);
+        ////============================================gzr==============
+        function displayChart(){
+            var query = new Query();
+            var queryUrl= 'https://zhongren.esri.com/arcgis/rest/services/MyMapService/MapServer/0';
+            var queryTask = new QueryTask(queryUrl);
+            query.where = "1=1";
+            query.outSpatialReference = map.spatialReference;
+            query.returnGeometry = true;
+            query.outFields = ["*"];
+            queryTask.execute(query, processResults, error);
+        }
+        Data= [];
+        function processResults(results){
+            console.log(results);
+            for(var i=0; i< results.features.length; i++){
+
+                if(results.features[i].attributes[results.fields[7].name]!= null
+                        &&results.features[i].attributes[results.fields[2].name]!= null
+                        &&results.features[i].attributes[results.fields[5].name]!= null
+                        &&results.features[i].attributes[results.fields[4].name]!= null
+                        &&results.features[i].attributes[results.fields[3].name]!= null){
+                    var xy= null;
+                    xy= geometryUrils.getPolygonCenterPoint(results.features[i].geometry);
+                    Data.push([results.features[i].attributes[results.fields[2].name]],
+                            xy.x, xy.y,
+                            results.features[i].attributes[results.fields[7].name],
+                            results.features[i].attributes[results.fields[6].name],
+                            results.features[i].attributes[results.fields[5].name],
+                            results.features[i].attributes[results.fields[4].name],
+                            results.features[i].attributes[results.fields[3].name]
+                    );
+                }
+            }
+            var showFields = ["08年", "09年", "10年", "11年", "12年"];
+            createChartInfoWindow(showFields);
+        }
+        function error(e){
+            alert(e.message);
+        }
+
+        ////============================================gzr==============
+
+        //创建放置直方图的信息窗口
+        function createChartInfoWindow(showFields) {
+            //假设虚构数据的最大值为1000
+            var max = 10000;
+
+            var optinalChart = null;
+            for(var i=0;i<Data.length;i++){
+//				     var infoWindow = new ChartInfoWindow({  //map, chartPoint, chart,
+//                         //domNode: domConstruct.create('div', null, document.getElementById('map'))
+//                    });
+                //===========================================important==========
+                var nodeChart = null;
+                //nodeChart用来放生成的图，不用
+                nodeChart = domConstruct.create("div", { id: 'nodeTest' + i, style: "width:120px;height:50px; background-color: blue" });
+                //var chart = makeChart(nodeChart,showFields,max,i);
+                //echartNode= "<div id='main' style='height:400px'></div>";
+
+                //nodeChart='<div id="main" style="height:400px; width:152px;"></div>';
+                //point
+                var labelPt = new Point(Data[i][1],Data[i][2],map.SpatialReference);
+                //单个ChartInfoWindow
+                var infoWindow= new ChartInfoWindow({
+                    /*mainMap -Required*/map:map,
+                    /*chartNode -Required*/chart: nodeChart,
+                    /*(x,y,spatialreference) -Required*/chartPoint: labelPt,
+                    /*float -Optional*/width: 152,
+                    /*float -Optional*/height: 72
+                });
+                //===========================================important==========
+
+            }
+        }
+
+        //在一个信息框中 绘制直方图
+        function makeChart(nodeChart,showFields, max,index) {
+            //初始化 一个图表变量
+            var  chart = new Chart2D(nodeChart,{margins: { l: 0, r: 0, t: 0, b: 0 }});
+            chart.addPlot("default", {type: "Columns"});
+            //chart.addplotarea({ stroke: null,fill: "transparent"});
+            chart.addAxis("x", { fixLower: "major", fixUpper: "major", min: 0,to:6, //初始刻度
+                labels: [{ value: 0, text: " " },{ value: 1, text: "A" },{ value: 2, text: " " },{ value: 3, text: "B"},{ value: 4, text: " "},{ value: 5, text: "C"},{value: 6, text: " "}],
+                font: "normal normal bold 6pt Tahoma",//X轴值的大小，字体等
+                fontColor: "black", //X轴值的颜色
+                majorTick: { color: "black", length:  0}, //X轴大刻度的颜色、长度
+                minorTick: { stroke: "black", length: 0} //X轴小刻度的颜色、长度
+            });//定义X轴
+            chart.addAxis("y", { vertical: true, fixLower: "major", fixUpper: "major", min: 0,to: 10000,//刻度最大允许值
+                font: "normal normal bold 4pt Tahoma", //Y轴值的字体、大小等
+                fontColor: "black", //Y轴值的颜色
+                majorTick: { color: "black", length: 1}, //Y轴大刻度的颜色、长度
+                minorTick: { stroke: "black", length: 0} //Y轴小刻度的颜色、长度
+            });//定义Y轴
+
+            //定义柱子颜色
+            var ColorArr=[new Color([0,220,0,0.85]),new Color([48,169,208,0.85]),new Color([62,193,121,0.85])];
+
+            //将attributes里各个字段的参数 设置为直方图的 “柱”
+            var length = showFields.length;
+            for (var i = 0; i < length; i++) {
+                serieValues = [];
+                for (var m = 0; m < i; m++) {
+                    serieValues.push(0);
+                    serieValues.push(0);
+                }
+                serieValues.push(Data[index][i+3]);
+                chart.addSeries(i, serieValues, { stroke: { color: "blue", width:0},fill: ColorArr[i]});
+            }
+
+            chart.render();
+            return chart;
+        }
+    });
+</script>
+
+</body>
+</html>
