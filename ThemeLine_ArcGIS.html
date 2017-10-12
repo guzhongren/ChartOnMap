@@ -1,0 +1,185 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>折线专题图</title>
+    <link rel="stylesheet" href="http://192.168.15.86:8080/arcgis_js_api/library/3.14/3.14/dijit/themes/claro/claro.css" />
+    <link rel="stylesheet" href="http://192.168.15.86:8080/arcgis_js_api/library/3.14/3.14/esri/css/esri.css">
+    <link href="ChartInfoWindow.css" rel="stylesheet" />
+    <style>
+        html,body,#map {
+             padding: 0;
+             margin: 0;
+             height: 100%;
+             width: 100%;
+             border:0px solid #000;
+         },
+        #info {
+             height: 10%;
+             width: 80%;
+             border:1px solid #000;
+        }
+    </style>
+    <script>
+	    //将 “G:\ArcGIS 范例\Chapter07\Sample7-2\js\CustomModules”目录下的ChartInfoWindow.js CustomTheme.js geometryUtils.js 三个文件打包为“CustomModules”添加到 引用之中
+        var dojoConfig = {            
+            packages: [{
+                name: "CustomModules",
+                location: location.pathname.replace(/\/[^/]+$/, "") + "/ArcGIS-js/CustomModules"
+            }]
+        };
+	    //console.dir(dojoConfig);
+    </script>
+    <script src="http://192.168.15.86:8080/arcgis_js_api/library/3.14/3.14/init.js"></script>
+    <script>
+        require([
+		     "esri/map", 
+			 "esri/geometry/Point",
+		     "esri/layers/FeatureLayer", 
+			 "esri/layers/ArcGISDynamicMapServiceLayer", 
+			 "esri/symbols/SimpleLineSymbol", 
+			 "esri/symbols/SimpleFillSymbol",
+             "esri/renderers/SimpleRenderer", 
+			 "esri/Color",
+			 //添加三个自定义类型的引用
+             "CustomModules/ChartInfoWindow", //图表信息窗口类，处理如何响应用户地图操作，包括漫游、放大、缩小等
+			 
+             "dojo/_base/array", 
+			 "dojo/dom-construct", 
+			 "dojo/_base/window",
+             "dojox/charting/Chart", 
+			 "dojox/charting/Chart2D",
+			 "dojox/charting/action2d/Highlight", 
+			 "dojox/charting/action2d/Tooltip", 
+			 "dojox/charting/plot2d/Lines",
+             "dojo/domReady!"
+        ], function (
+          Map, Point,FeatureLayer, ArcGISDynamicMapServiceLayer,
+          SimpleLineSymbol, SimpleFillSymbol,
+          SimpleRenderer, Color, 
+		  ChartInfoWindow,
+          array, domConstruct, win,
+          Chart,Chart2D,Highlight, Tooltip,Lines
+        ) {
+		     var Data = [
+             ["北京市", 933606.67, 4878966.67, 2023, 4982, 7760],
+             ["天津市", 1022971.388, 4794258.23, 5200, 7852, 8624],
+             ["上海市", 1549021.62, 3990244.41, 4582, 5271, 5439],
+             ["重庆市", 268040.96, 3708718.69, 8494, 9723, 1832],
+             ["黑龙江省", 1672578.76, 5805333.17, 7922, 9121, 1634],
+             ["吉林省", 1593237.72, 5412773, 8538, 9241, 1811],
+             ["辽宁省", 1445669.53, 5114055.01, 1906, 3016, 5635],
+             ["山西省", 619620.09, 4566763.28, 6854, 8447, 9746],
+             ["河北省", 870342.74, 4672783.14, 7193, 8057, 9551],
+             ["陕西省", 347000.06, 4221482.37, 7154, 8474, 1053],
+             ["甘肃省", -183370.5, 4566763.28, 5509, 6234, 7493],
+             ["四川省", -194586.104, 3802829.23, 6863, 8182, 9903],
+             ["贵州省", 207842.81, 3351068.85, 5456, 6218, 7389],
+             ["云南省", -359506.73, 3090317.29, 5976, 6811, 8278],
+             ["海南省", 524469.70, 2477127.32,  6695, 7553, 9238],
+             ["浙江省", 1468077.08, 3756523.19, 5867, 8274, 2346],
+             ["山东省", 1107036.46, 4475739.03, 1494, 1606, 3524],
+             ["江苏省", 1346905.968, 4179534.072, 1993, 4035, 7167],
+             ["安徽省", 1132825.078, 4000082.34, 6829, 8237, 1055],
+             ["福建省", 1316210.78, 3361097.75, 1336, 3187, 4958],
+             ["江西省", 1039699.52, 3505800.54, 6212, 7989, 9523],
+             ["河南省", 761755.55, 4220718.27, 6607, 7837, 9171],
+             ["湖北省", 715909.12, 3852514.15, 7791, 8977, 10873],
+             ["湖南省", 662899.19, 3488608.13, 7929, 8922, 10547],
+             ["广东省", 903093.91, 3054857.94, 5243, 7211, 9578],
+             ["青海省", -768655.9, 4411625.66, 6501, 7326, 8744],
+             ["西藏自治区", -1569535.69, 3950295.98, 3985, 4469, 4730],
+             ["广西壮族自治区", 407591.50, 2997549.91, 6968, 7920, 9181],
+             ["内蒙古自治区", 745166.41, 5233995, 1925, 3264],
+             ["宁夏回族自治区", 100579.51, 4519699.09, 7918, 8992, 1937],
+             ["新疆维吾尔自治区", -1574073.93, 5118209.87, 5945, 7400, 8895]];
+		
+            var map = new Map("map", {
+                center: [410609, 3622926],
+                //zoom: 4,
+                slider: false
+            });
+            
+            var baseLayer = new ArcGISDynamicMapServiceLayer("http://localhost:6080/arcgis/rest/services/chinamap_Theme/MapServer");
+            map.addLayer(baseLayer);
+            
+			//读取一个feature图层
+            var featureLayer = new FeatureLayer("http://localhost:6080/arcgis/rest/services/chinamap_Theme/MapServer/2", {
+                mode: FeatureLayer.MODE_SNAPSHOT,//快照模式？？？
+                outFields: ["FID"]
+            });
+			
+			//为featureLayer设置渲染器
+            var defaultSymbol = new SimpleFillSymbol().setStyle(SimpleFillSymbol.STYLE_NULL);
+            var renderer = new SimpleRenderer(defaultSymbol);
+            featureLayer.setRenderer(renderer);
+			
+			//featureLayer图层加载完毕后触发 createChartInfoWindow函数
+            featureLayer.on("update-end", function (evt) {
+                var showFields = ["A", "B","C"];
+                createChartInfoWindow(showFields);
+            });
+			
+            map.addLayer(featureLayer);
+            
+			//创建放置直方图的信息窗口
+            function createChartInfoWindow(showFields) {
+				
+                //假设虚构数据的最大值为1000
+				var max = 10000;
+				//
+                var optinalChart = null;
+				for(var i=0;i<Data.length;i++){
+				    var infoWindow = new ChartInfoWindow({
+                        domNode: domConstruct.create('div', null, document.getElementById('map'))
+                    });
+                    infoWindow.setMap(map);
+
+                    var nodeChart = null;
+                    
+                    nodeChart = domConstruct.create("div", { id: 'nodeTest' + i, style: "width:130px;height:80px" }, win.body());
+                    var chart = makeChart(nodeChart,showFields, max,i);
+                    optinalChart = chart;
+                    infoWindow.resize(132, 82);
+                    
+					 //计算几何的中心位置，将图表信息框放置于此
+					 var labelPt = new Point(Data[i][1],Data[i][2],map.SpatialReference);
+                    infoWindow.setContent(nodeChart);
+                    infoWindow.__mcoords = labelPt;
+                    infoWindow.show(map.toScreen(labelPt));
+				}
+            }
+
+			 //在一个信息框中 绘制直方图
+            function makeChart(nodeChart,showFields, max,index) {
+			     var chart = new Chart2D(nodeChart);
+                     chart.addPlot("default", {type: "Lines"});
+					 /*
+					 chart.addAxis("x");
+                     chart.addAxis("y", {vertical: true});
+					 */
+                     chart.addAxis("x", { fixLower: "major", fixUpper: "major", min: 1,to:3, //初始刻度
+                         labels: [{ value: 1, text: "A" },{ value: 2, text: "B"},{ value: 3, text: "C"}],
+                         font: "normal normal bold 6pt Tahoma",//X轴值的大小，字体等
+                         fontColor: "black", //X轴值的颜色
+                         majorTick: { color: "black", length:  0}, //X轴大刻度的颜色、长度
+                         minorTick: { stroke: "black", length: 0} //X轴小刻度的颜色、长度
+                     });//定义X轴
+				     chart.addAxis("y", { vertical: true, fixLower: "major", fixUpper: "major", min: 0,to: 10000,//刻度最大允许值
+                         font: "normal normal bold 4pt Tahoma", //Y轴值的字体、大小等
+                         fontColor: "black", //Y轴值的颜色
+                         majorTick: { color: "black", length: 1}, //Y轴大刻度的颜色、长度
+                         minorTick: { stroke: "black", length: 0} //Y轴小刻度的颜色、长度
+                     });//定义Y轴
+					
+                     chart.addSeries("all", [Data[index][3],Data[index][4],Data[index][5]], {stroke: {color: new Color([240,162,22,0.85])}});
+                     chart.render();
+                 return chart;
+            }
+        });
+    </script>
+</head>
+<body class="claro">
+    <div id="map" style="border:1px solid #000;"></div>
+</body>
+</html>
