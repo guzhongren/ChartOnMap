@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>图表上图</title>
+
+    <link href="ChartInfoWindow.css" rel="stylesheet" />
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        #map {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #info {
+            height: 20%;
+            width: 100%;
+        }
+    </style>
+    <script>
+        var dojoConfig = {
+            packages: [{
+                name: "CustomModules",
+                location: location.pathname.replace(/\/[^/]+$/, "") + "/Widget/CustomModules"
+            }]
+        };
+    </script>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/3.33/dijit/themes/claro/claro.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.33/esri/css/esri.css">
+    <script src="https://js.arcgis.com/3.33/"></script>
+    <script src="./demo-data.js"></script>
+
+</head>
+
+<body class="claro">
+    <div id="map"></div>
+    <script src="echarts-2.2.7/build/dist/echarts-all.js"></script>
+    <script>
+        require([
+            "esri/map",
+            "esri/geometry/Point",
+            "esri/layers/FeatureLayer",
+            "esri/layers/ArcGISDynamicMapServiceLayer",
+            "esri/symbols/SimpleLineSymbol",
+            "esri/symbols/SimpleFillSymbol",
+            "esri/renderers/SimpleRenderer",
+            "esri/Color",
+            'esri/layers/GraphicsLayer',
+            'esri/graphic',
+            "esri/tasks/query",
+            "esri/tasks/QueryTask",
+            "esri/geometry/ScreenPoint",
+            //添加自定义类型的引用
+            "CustomModules/ChartInfoWindow",
+            "CustomModules/geometryUtils",
+            "dojo/_base/array",
+            "dojo/dom-construct",
+            "dojo/_base/window",
+            "dojox/charting/Chart",
+            "dojox/charting/themes/Claro",
+            "dojox/charting/plot2d/Pie",
+            "dojox/charting/action2d/Tooltip",
+            "dojox/charting/action2d/MoveSlice",
+            "dojox/charting/plot2d/Markers",
+            "dojox/charting/axis2d/Default",
+
+
+            "dojo/domReady!"
+        ], function (
+            Map, Point, FeatureLayer, ArcGISDynamicMapServiceLayer,
+            SimpleLineSymbol, SimpleFillSymbol,
+            SimpleRenderer, Color, GraphicsLayer, Graphic, Query, QueryTask, ScreenPoint,
+            ChartInfoWindow, geometryUrils,
+            array, domConstruct, win, Chart, theme, Pie, Tooltip, MoveSlice
+
+        ) {
+            var map = new Map("map", {
+                center: [112, 38],
+                zoom: 6,
+                basemap: "osm"
+            });
+
+            map.on("load", function (evt) {
+                processResults(result);
+            });
+
+            function processResults(results) {
+                for (var i = 0; i < results.features.length; i++) {
+                    var chartData = null;
+                    chartData = [];
+                    if (results.features[i].attributes[results.fields[7].name] != null
+                        && results.features[i].attributes[results.fields[6].name] != null
+                        && results.features[i].attributes[results.fields[5].name] != null
+                        && results.features[i].attributes[results.fields[4].name] != null
+                        && results.features[i].attributes[results.fields[3].name] != null) {
+
+                        var nodeChart = null;
+                        nodeChart = domConstruct.create("div", { id: 'nodeTest' + i, style: "width:300px;height:300px;" }, win.body());
+                        var myChart = echarts.init(document.getElementById("nodeTest" + i));
+
+                        //柱状图
+                        var option = {
+                            tooltip: {
+                                show: true
+                            },
+                            legend: {
+                                data: []
+                            },
+                            xAxis: [
+                                {
+                                    type: 'category',
+                                    data: ["08年"]
+                                }
+                            ],
+                            yAxis: [
+                                {
+                                    type: 'value'
+                                }
+                            ],
+                            series: [
+                                {
+                                    "name": "生产总值",
+                                    "type": "bar",
+                                    "data": [results.features[i].attributes[results.fields[7].name],
+                                    results.features[i].attributes[results.fields[6].name],
+                                    results.features[i].attributes[results.fields[5].name],
+                                    results.features[i].attributes[results.fields[4].name],
+                                    results.features[i].attributes[results.fields[3].name]]
+                                }
+                            ]
+                        };
+
+                        // 为echarts对象加载数据
+                        myChart.setOption(option);
+                        //
+                        const screen = new Point(results.features[i].center.x, results.features[i].center.y)
+                        var chartInfo = new ChartInfoWindow({
+                            map: map,
+                            chart: nodeChart,
+                            chartPoint: screen
+                            //                        width: 320,
+                            //                        height: 320
+                        });
+                    }
+                }
+            }
+        });
+    </script>
+
+</body>
+
+</html>
