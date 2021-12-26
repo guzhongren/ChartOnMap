@@ -2,6 +2,8 @@
 
 > 此库使用ArcGIS API for JavaScript 3.14版本(其他版本未测试，不支持4.0版本)与ECharts，扩展了AGS API ,实现了像在ArcMap中制作统计专题图的效果。
 
+[Demo](https://guzhongren.github.io/ChartOnMap/examples/ChartsOnMap-pie.html)
+
 ## 效果如下：
 ### 饼状图:
 ![Alt text](examples/images/AGSECharts-pie.gif "AGSECharts饼状图")
