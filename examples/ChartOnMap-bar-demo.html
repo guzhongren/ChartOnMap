@@ -84,10 +84,10 @@
             array, domConstruct, win, Chart, theme, Pie, Tooltip, MoveSlice
 
         ) {
-            var map = new Map("map", {
-                center: [112, 38],
-                zoom: 6,
-                basemap: "osm"
+            const map = new Map("map", {
+                center: [-117.200167655977, 34.045960864520715],
+                zoom: 14,
+                basemap: "topo",
             });
 
             map.on("load", function (evt) {

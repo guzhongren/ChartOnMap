@@ -3,14 +3,24 @@
 	<head>
 		<meta charset="utf-8" />
 		<title>图表上图</title>
-
+		<script>
+			var dojoConfig = {
+				tlmSiblingOfDojo: false,
+				packages: [
+					{
+						name: "CustomModules",
+						location: location.pathname.replace(/\/[^/]*$/,'') + "/Widget/CustomModules"
+					},
+				],
+			};
+		</script>
 		<link
 			rel="stylesheet"
-			href="http://localhost/arcgis_js_api/library/3.14/3.14/dijit/themes/tundra/tundra.css"
+			href="https://js.arcgis.com/3.24/dijit/themes/tundra/tundra.css"
 		/>
 		<link
 			rel="stylesheet"
-			href="http://localhost/arcgis_js_api/library/3.14/3.14/esri/css/esri.css"
+			href="https://js.arcgis.com/3.24/esri/css/esri.css"
 		/>
 
 		<link href="ChartInfoWindow.css" rel="stylesheet" />
@@ -32,17 +42,8 @@
 				width: 100%;
 			}
 		</style>
-		<script>
-			const dojoConfig = {
-				packages: [
-					{
-						name: "CustomModules",
-						location: location.pathname.replace(/\/[^/]+$/, "") + "/Widget/CustomModules",
-					},
-				],
-			};
-		</script>
-		<script src="http://localhost/arcgis_js_api/library/3.14/3.14/init.js"></script>
+		
+		<script src="https://js.arcgis.com/3.24/"></script>
 	</head>
 	<body class="claro">
 		<div id="map"></div>
@@ -101,13 +102,19 @@
 				MoveSlice,
 			) {
 				const map = new Map("map", {
-					center: [112, 38],
-					zoom: 8,
+					center: [-117.200167655977, 34.045960864520715],
+					zoom: 14,
 					basemap: "topo",
 				});
 
+				map.on('click', (evt) => {
+					console.log(evt.mapPoint.getLongitude())
+					console.log(evt.mapPoint.getLatitude())
+				})
+
+				const featureLayerURL = "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/BEK%e2%80%93_left_bufferts/FeatureServer/0";
 				const featureLayer = new FeatureLayer(
-					"https://zhongren.esri.com/arcgis/rest/services/MyMapService/MapServer/0",
+					featureLayerURL,
 					{
 						mode: FeatureLayer.MODE_SNAPSHOT,
 						outFields: ["*"],
@@ -123,12 +130,9 @@
 				});
 
 				map.addLayer(featureLayer);
-				////============================================gzr==============
 				function displayChart() {
 					const query = new Query();
-					const queryUrl =
-						"https://zhongren.esri.com/arcgis/rest/services/MyMapService/MapServer/0";
-					const queryTask = new QueryTask(queryUrl);
+					const queryTask = new QueryTask(featureLayerURL);
 					query.where = "1=1";
 					query.outSpatialReference = map.spatialReference;
 					query.returnGeometry = true;
@@ -137,17 +141,13 @@
 				}
 				function processResults(results) {
 					console.log(results);
-					for (const i = 0; i < results.features.length; i++) {
-						const chartData = null;
-						chartData = [];
+					for (let i = 0; i < results.features.length; i++) {
+						let chartData = [];
 						if (
-							results.features[i].attributes[results.fields[7].name] != null &&
-							results.features[i].attributes[results.fields[6].name] != null &&
-							results.features[i].attributes[results.fields[5].name] != null &&
-							results.features[i].attributes[results.fields[4].name] != null &&
-							results.features[i].attributes[results.fields[3].name] != null
+							results.features[i].attributes[results.fields[1].name] != null &&
+							results.features[i].attributes[results.fields[2].name] != null 
 						) {
-							const nodeChart = null;
+							let nodeChart = null;
 							nodeChart = domConstruct.create(
 								"div",
 								{ id: "nodeTest" + i, style: "width:300px;height:300px;" },
@@ -155,20 +155,14 @@
 							);
 							const myChart = echarts.init(document.getElementById("nodeTest" + i));
 
-							//饼状图
 							option = {
 								title: {
-									//                            text: '某站点用户访问来源',
-									//                            subtext: '纯属虚构',
-									//                            x:'center'
 								},
 								tooltip: {
 									trigger: "item",
 									formatter: "{a} <br/>{b} : {c} ({d}%)",
 								},
 								legend: {
-									//                            orient : 'vertical',
-									//                            x : 'left',
 									data: [],
 								},
 								toolbox: {
@@ -195,46 +189,32 @@
 								calculable: true,
 								series: [
 									{
-										name: "生产总值",
+										name: "Buffer distance in Meters",
 										type: "pie",
 										radius: "55%",
 										center: ["50%", "60%"],
 										data: [
 											{
-												value: results.features[i].attributes[results.fields[7].name],
-												name: "08年",
+												value: results.features[i].attributes[results.fields[1].name],
+												name: "first",
 											},
 											{
-												value: results.features[i].attributes[results.fields[6].name],
-												name: "09年",
-											},
-											{
-												value: results.features[i].attributes[results.fields[5].name],
-												name: "10年",
-											},
-											{
-												value: results.features[i].attributes[results.fields[4].name],
-												name: "11年",
-											},
-											{
-												value: results.features[i].attributes[results.fields[3].name],
-												name: "12年",
-											},
+												value: results.features[i].attributes[results.fields[2].name],
+												name: "second",
+											}
 										],
 									},
 								],
 							};
 
-							// 为echarts对象加载数据
 							myChart.setOption(option);
-							const chartPoint = null;
-							chartPoint = geometryUrils.getPolygonCenterPoint(results.features[i].geometry);
+							const chartPoint = geometryUrils.getPolygonCenterPoint(results.features[i].geometry);
 							const chartInfo = new ChartInfoWindow({
 								map: map,
 								chart: nodeChart,
 								chartPoint: chartPoint,
-								//                        width: 320,
-								//                        height: 320
+								// width: 320,
+								// height: 320
 							});
 						}
 					}

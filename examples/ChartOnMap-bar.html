@@ -1,215 +1,207 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="utf-8" />
-		<title>图表上图</title>
 
-		<link
-			rel="stylesheet"
-			href="http://localhost/arcgis_js_api/library/3.14/3.14/dijit/themes/tundra/tundra.css"
-		/>
-		<link
-			rel="stylesheet"
-			href="http://localhost/arcgis_js_api/library/3.14/3.14/esri/css/esri.css"
-		/>
+<head>
+	<meta charset="utf-8" />
+	<title>图表上图</title>
+	<script>
+		var dojoConfig = {
+			tlmSiblingOfDojo: false,
+			packages: [
+				{
+					name: "CustomModules",
+					location: location.pathname.replace(/\/[^/]*$/, '') + "/Widget/CustomModules"
+				},
+			],
+		};
+	</script>
+	<link rel="stylesheet" href="https://js.arcgis.com/3.24/dijit/themes/tundra/tundra.css" />
+	<link rel="stylesheet" href="https://js.arcgis.com/3.24/esri/css/esri.css" />
 
-		<link href="ChartInfoWindow.css" rel="stylesheet" />
-		<style>
-			html,
-			body {
-				padding: 0;
-				margin: 0;
-				height: 100%;
-				width: 100%;
+	<link href="ChartInfoWindow.css" rel="stylesheet" />
+	<style>
+		html,
+		body {
+			padding: 0;
+			margin: 0;
+			height: 100%;
+			width: 100%;
+		}
+
+		#map {
+			position: relative;
+			width: 100%;
+			height: 100%;
+		}
+
+		#info {
+			height: 20%;
+			width: 100%;
+		}
+	</style>
+	<script src="https://js.arcgis.com/3.24/"></script>
+</head>
+
+<body class="claro">
+	<div id="map"></div>
+	<script src="echarts-2.2.7/build/dist/echarts-all.js"></script>
+	<script>
+		require([
+			"esri/map",
+			"esri/geometry/Point",
+			"esri/layers/FeatureLayer",
+			"esri/layers/ArcGISDynamicMapServiceLayer",
+			"esri/symbols/SimpleLineSymbol",
+			"esri/symbols/SimpleFillSymbol",
+			"esri/renderers/SimpleRenderer",
+			"esri/Color",
+			"esri/layers/GraphicsLayer",
+			"esri/graphic",
+			"esri/tasks/query",
+			"esri/tasks/QueryTask",
+			//添加自定义类型的引用
+			"CustomModules/ChartInfoWindow",
+			"CustomModules/geometryUtils",
+			"dojo/_base/array",
+			"dojo/dom-construct",
+			"dojo/_base/window",
+			"dojox/charting/Chart",
+			"dojox/charting/themes/Claro",
+			"dojox/charting/plot2d/Pie",
+			"dojox/charting/action2d/Tooltip",
+			"dojox/charting/action2d/MoveSlice",
+			"dojox/charting/plot2d/Markers",
+			"dojox/charting/axis2d/Default",
+
+			"dojo/domReady!",
+		], function (
+			Map,
+			Point,
+			FeatureLayer,
+			ArcGISDynamicMapServiceLayer,
+			SimpleLineSymbol,
+			SimpleFillSymbol,
+			SimpleRenderer,
+			Color,
+			GraphicsLayer,
+			Graphic,
+			Query,
+			QueryTask,
+			ChartInfoWindow,
+			geometryUrils,
+			array,
+			domConstruct,
+			win,
+			Chart,
+			theme,
+			Pie,
+			Tooltip,
+			MoveSlice,
+		) {
+			const map = new Map("map", {
+				center: [-117.200167655977, 34.045960864520715],
+				zoom: 14,
+				basemap: "topo",
+			});
+
+
+			const featureLayerURL = "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/BEK%e2%80%93_left_bufferts/FeatureServer/0";
+			//读取一个feature图层作为地形边界
+			const featureLayer = new FeatureLayer(
+				featureLayerURL,
+				{
+					mode: FeatureLayer.MODE_SNAPSHOT,
+					outFields: ["*"],
+				},
+			);
+
+			const defaultSymbol = new SimpleFillSymbol().setStyle(SimpleFillSymbol.STYLE_NULL);
+			const renderer = new SimpleRenderer(defaultSymbol);
+			featureLayer.setRenderer(renderer);
+
+			map.on("load", function (evt) {
+				displayChart();
+			});
+
+			map.addLayer(featureLayer);
+			////============================================gzr==============
+			function displayChart() {
+				const query = new Query();
+				const queryTask = new QueryTask(featureLayerURL);
+				query.where = "1=1";
+				query.outSpatialReference = map.spatialReference;
+				query.returnGeometry = true;
+				query.outFields = ["*"];
+				queryTask.execute(query, processResults, error);
 			}
-			#map {
-				position: relative;
-				width: 100%;
-				height: 100%;
-			}
-			#info {
-				height: 20%;
-				width: 100%;
-			}
-		</style>
-		<script>
-			const dojoConfig = {
-				packages: [
-					{
-						name: "CustomModules",
-						location: location.pathname.replace(/\/[^/]+$/, "") + "/Widget/CustomModules",
-					},
-				],
-			};
-		</script>
-		<script src="http://localhost/arcgis_js_api/library/3.14/3.14/init.js"></script>
-	</head>
-	<body class="claro">
-		<div id="map"></div>
-		<script src="echarts-2.2.7/build/dist/echarts-all.js"></script>
-		<script>
-			require([
-				"esri/map",
-				"esri/geometry/Point",
-				"esri/layers/FeatureLayer",
-				"esri/layers/ArcGISDynamicMapServiceLayer",
-				"esri/symbols/SimpleLineSymbol",
-				"esri/symbols/SimpleFillSymbol",
-				"esri/renderers/SimpleRenderer",
-				"esri/Color",
-				"esri/layers/GraphicsLayer",
-				"esri/graphic",
-				"esri/tasks/query",
-				"esri/tasks/QueryTask",
-				//添加自定义类型的引用
-				"CustomModules/ChartInfoWindow",
-				"CustomModules/geometryUtils",
-				"dojo/_base/array",
-				"dojo/dom-construct",
-				"dojo/_base/window",
-				"dojox/charting/Chart",
-				"dojox/charting/themes/Claro",
-				"dojox/charting/plot2d/Pie",
-				"dojox/charting/action2d/Tooltip",
-				"dojox/charting/action2d/MoveSlice",
-				"dojox/charting/plot2d/Markers",
-				"dojox/charting/axis2d/Default",
+			function processResults(results) {
+				console.log(results);
+				for (const i = 0; i < results.features.length; i++) {
+					const chartData = null;
+					chartData = [];
+					if (
+						results.features[i].attributes[results.fields[1].name] != null &&
+						results.features[i].attributes[results.fields[2].name] != null
+					) {
+						const nodeChart = null;
+						nodeChart = domConstruct.create(
+							"div",
+							{ id: "nodeTest" + i, style: "width:300px;height:300px;" },
+							win.body(),
+						);
+						const myChart = echarts.init(document.getElementById("nodeTest" + i));
 
-				"dojo/domReady!",
-			], function (
-				Map,
-				Point,
-				FeatureLayer,
-				ArcGISDynamicMapServiceLayer,
-				SimpleLineSymbol,
-				SimpleFillSymbol,
-				SimpleRenderer,
-				Color,
-				GraphicsLayer,
-				Graphic,
-				Query,
-				QueryTask,
-				ChartInfoWindow,
-				geometryUrils,
-				array,
-				domConstruct,
-				win,
-				Chart,
-				theme,
-				Pie,
-				Tooltip,
-				MoveSlice,
-			) {
-				const map = new Map("map", {
-					center: [112, 38],
-					zoom: 8,
-					basemap: "topo",
-				});
-
-				//读取一个feature图层作为地形边界
-				const featureLayer = new FeatureLayer(
-					"https://zhongren.esri.com/arcgis/rest/services/MyMapService/MapServer/0",
-					{
-						mode: FeatureLayer.MODE_SNAPSHOT,
-						outFields: ["*"],
-					},
-				);
-
-				const defaultSymbol = new SimpleFillSymbol().setStyle(SimpleFillSymbol.STYLE_NULL);
-				const renderer = new SimpleRenderer(defaultSymbol);
-				featureLayer.setRenderer(renderer);
-
-				map.on("load", function (evt) {
-					displayChart();
-				});
-
-				map.addLayer(featureLayer);
-				////============================================gzr==============
-				function displayChart() {
-					const query = new Query();
-					const queryUrl =
-						"https://zhongren.esri.com/arcgis/rest/services/MyMapService/MapServer/0";
-					const queryTask = new QueryTask(queryUrl);
-					query.where = "1=1";
-					query.outSpatialReference = map.spatialReference;
-					query.returnGeometry = true;
-					query.outFields = ["*"];
-					queryTask.execute(query, processResults, error);
-				}
-				function processResults(results) {
-					console.log(results);
-					for (const i = 0; i < results.features.length; i++) {
-						const chartData = null;
-						chartData = [];
-						if (
-							results.features[i].attributes[results.fields[7].name] != null &&
-							results.features[i].attributes[results.fields[6].name] != null &&
-							results.features[i].attributes[results.fields[5].name] != null &&
-							results.features[i].attributes[results.fields[4].name] != null &&
-							results.features[i].attributes[results.fields[3].name] != null
-						) {
-							const nodeChart = null;
-							nodeChart = domConstruct.create(
-								"div",
-								{ id: "nodeTest" + i, style: "width:300px;height:300px;" },
-								win.body(),
-							);
-							const myChart = echarts.init(document.getElementById("nodeTest" + i));
-
-							//柱状图
-							const option = {
-								tooltip: {
-									show: true,
+						//柱状图
+						const option = {
+							tooltip: {
+								show: true,
+							},
+							legend: {
+								data: [],
+							},
+							xAxis: [
+								{
+									type: "category",
+									data: ["08年", "09年", "10年", "11年", "12年"],
 								},
-								legend: {
-									data: [],
+							],
+							yAxis: [
+								{
+									type: "value",
 								},
-								xAxis: [
-									{
-										type: "category",
-										data: ["08年", "09年", "10年", "11年", "12年"],
-									},
-								],
-								yAxis: [
-									{
-										type: "value",
-									},
-								],
-								series: [
-									{
-										name: "生产总值",
-										type: "bar",
-										data: [
-											results.features[i].attributes[results.fields[7].name],
-											results.features[i].attributes[results.fields[6].name],
-											results.features[i].attributes[results.fields[5].name],
-											results.features[i].attributes[results.fields[4].name],
-											results.features[i].attributes[results.fields[3].name],
-										],
-									},
-								],
-							};
+							],
+							series: [
+								{
+									name: "生产总值",
+									type: "bar",
+									data: [
+										results.features[i].attributes[results.fields[1].name],
+										results.features[i].attributes[results.fields[2].name]
+									],
+								},
+							],
+						};
 
-							// 为echarts对象加载数据
-							myChart.setOption(option);
-							//
-							let chartPoint = null;
-							chartPoint = geometryUrils.getPolygonCenterPoint(results.features[i].geometry);
-							const chartInfo = new ChartInfoWindow({
-								map: map,
-								chart: nodeChart,
-								chartPoint: chartPoint,
-								//                        width: 320,
-								//                        height: 320
-							});
-						}
+						// 为echarts对象加载数据
+						myChart.setOption(option);
+						//
+						let chartPoint = null;
+						chartPoint = geometryUrils.getPolygonCenterPoint(results.features[i].geometry);
+						const chartInfo = new ChartInfoWindow({
+							map: map,
+							chart: nodeChart,
+							chartPoint: chartPoint,
+							//                        width: 320,
+							//                        height: 320
+						});
 					}
 				}
-				function error(e) {
-					alert(e.message);
-				}
-			});
-		</script>
-	</body>
-</html>
+			}
+			function error(e) {
+				alert(e.message);
+			}
+		});
+	</script>
+</body>
 
+</html>

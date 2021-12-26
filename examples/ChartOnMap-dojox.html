@@ -3,15 +3,19 @@
 	<head>
 		<meta charset="utf-8" />
 		<title>图表上图</title>
-
-		<link
-			rel="stylesheet"
-			href="http://localhost/arcgis_js_api/library/3.14/3.14/dijit/themes/tundra/tundra.css"
-		/>
-		<link
-			rel="stylesheet"
-			href="http://localhost/arcgis_js_api/library/3.14/3.14/esri/css/esri.css"
-		/>
+		<script>
+			var dojoConfig = {
+				tlmSiblingOfDojo: false,
+				packages: [
+					{
+						name: "CustomModules",
+						location: location.pathname.replace(/\/[^/]*$/, '') + "/Widget/CustomModules"
+					},
+				],
+			};
+		</script>
+		<link rel="stylesheet" href="https://js.arcgis.com/3.24/dijit/themes/tundra/tundra.css" />
+	<link rel="stylesheet" href="https://js.arcgis.com/3.24/esri/css/esri.css" />
 
 		<link href="ChartInfoWindow.css" rel="stylesheet" />
 		<style>
@@ -32,17 +36,7 @@
 				width: 100%;
 			}
 		</style>
-		<script>
-			const dojoConfig = {
-				packages: [
-					{
-						name: "CustomModules",
-						location: location.pathname.replace(/\/[^/]+$/, "") + "/Widget/CustomModules",
-					},
-				],
-			};
-		</script>
-		<script src="http://localhost/arcgis_js_api/library/3.14/3.14/init.js"></script>
+		<script src="https://js.arcgis.com/3.24/"></script>
 	</head>
 	<body class="claro">
 		<div id="map"></div>
@@ -100,14 +94,15 @@
 				Tooltip,
 				MoveSlice,
 			) {
-				const Data = null;
+				let Data = null;
 				const map = new Map("map", {
-					center: [112, 38],
-					zoom: 8,
+					center: [-117.200167655977, 34.045960864520715],
+					zoom: 14,
 					basemap: "topo",
 				});
+				const featureLayerURL = "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/BEK%e2%80%93_left_bufferts/FeatureServer/0";
 				const featureLayer = new FeatureLayer(
-					"https://zhongren.esri.com/arcgis/rest/services/MyMapService/MapServer/0",
+					featureLayerURL,
 					{
 						mode: FeatureLayer.MODE_SNAPSHOT,
 						outFields: ["*"],
@@ -126,9 +121,7 @@
 				////============================================gzr==============
 				function displayChart() {
 					const query = new Query();
-					const queryUrl =
-						"https://zhongren.esri.com/arcgis/rest/services/MyMapService/MapServer/0";
-					const queryTask = new QueryTask(queryUrl);
+					const queryTask = new QueryTask(featureLayerURL);
 					query.where = "1=1";
 					query.outSpatialReference = map.spatialReference;
 					query.returnGeometry = true;
@@ -138,25 +131,19 @@
 				Data = [];
 				function processResults(results) {
 					console.log(results);
-					for (const i = 0; i < results.features.length; i++) {
+					for (let i = 0; i < results.features.length; i++) {
 						if (
-							results.features[i].attributes[results.fields[7].name] != null &&
-							results.features[i].attributes[results.fields[2].name] != null &&
-							results.features[i].attributes[results.fields[5].name] != null &&
-							results.features[i].attributes[results.fields[4].name] != null &&
-							results.features[i].attributes[results.fields[3].name] != null
+							results.features[i].attributes[results.fields[1].name] != null &&
+						results.features[i].attributes[results.fields[2].name] != null
 						) {
-							const xy = null;
+							let xy = null;
 							xy = geometryUrils.getPolygonCenterPoint(results.features[i].geometry);
 							Data.push(
 								[results.features[i].attributes[results.fields[2].name]],
 								xy.x,
 								xy.y,
-								results.features[i].attributes[results.fields[7].name],
-								results.features[i].attributes[results.fields[6].name],
-								results.features[i].attributes[results.fields[5].name],
-								results.features[i].attributes[results.fields[4].name],
-								results.features[i].attributes[results.fields[3].name],
+								results.features[i].attributes[results.fields[1].name],
+								results.features[i].attributes[results.fields[2].name],
 							);
 						}
 					}
@@ -174,13 +161,12 @@
 					//假设虚构数据的最大值为1000
 					const max = 10000;
 
-					const optinalChart = null;
-					for (const i = 0; i < Data.length; i++) {
+					for (let i = 0; i < Data.length; i++) {
 						//				     const infoWindow = new ChartInfoWindow({  //map, chartPoint, chart,
 						//                         //domNode: domConstruct.create('div', null, document.getElementById('map'))
 						//                    });
 						//===========================================important==========
-						const nodeChart = null;
+						let nodeChart = null;
 						//nodeChart用来放生成的图，不用
 						nodeChart = domConstruct.create("div", {
 							id: "nodeTest" + i,
@@ -191,7 +177,9 @@
 
 						//nodeChart='<div id="main" style="height:400px; width:152px;"></div>';
 						//point
-						const labelPt = new Point(Data[i][1], Data[i][2], map.SpatialReference);
+						const labelPt102100 = new Point(Data[i][1], Data[i][2], map.SpatialReference);
+						console.log(labelPt102100)
+						const labelPt = new Point(labelPt102100.getLongitude(), labelPt102100.getLatitude(), 4326)
 						//单个ChartInfoWindow
 						const infoWindow = new ChartInfoWindow({
 							/*mainMap -Required*/ map: map,
